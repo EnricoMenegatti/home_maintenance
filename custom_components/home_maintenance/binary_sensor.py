@@ -74,10 +74,12 @@ class HomeMaintenanceSensor(BinarySensorEntity):
         """Return the icon for the task."""
         return self.task.get("icon", "mdi:calendar-check")
 
-    def _calculate_next_due(
+    def _calculate_next_due_date(
         self, last_performed: datetime, interval_value: int, interval_type: str
-    ) -> datetime:
-        """Calculate the next date based on last date and interval."""
+    ) -> datetime | None:
+        """Calculate the next date based on last date and interval. Returns None for km-based intervals."""
+        if interval_type in ("kilometers", "miles"):
+            return None
         if interval_type == "days":
             return last_performed + timedelta(days=interval_value)
         if interval_type == "weeks":
@@ -87,41 +89,94 @@ class HomeMaintenanceSensor(BinarySensorEntity):
 
         return last_performed
 
+    def _calculate_next_due_odometer(
+        self, last_odometer: float | None, interval_value: int, interval_type: str
+    ) -> float | None:
+        """Calculate the next odometer value based on last odometer and interval. Returns None for time-based intervals."""
+        if interval_type not in ("kilometers", "miles"):
+            return None
+        if last_odometer is None:
+            return None
+        return last_odometer + interval_value
+
+    def _get_current_odometer(self) -> float | None:
+        """Get current odometer reading from entity if available."""
+        odometer_entity = self.task.get("odometer_entity")
+        if not odometer_entity:
+            return None
+        
+        try:
+            state = self.hass.states.get(odometer_entity)
+            if state and state.state not in ("unknown", "unavailable", None):
+                return float(state.state)
+        except (ValueError, TypeError, AttributeError):
+            pass
+        return None
+
     def _update_state(self) -> None:
         """Get the latest state of the sensor."""
-        last = dt_util.parse_datetime(self.task["last_performed"])
-        if last is None:
-            self._attr_is_on = True
-            self._attr_extra_state_attributes = {
-                "last_performed": self.task["last_performed"],
-                "interval_value": self.task["interval_value"],
-                "interval_type": self.task["interval_type"],
-                "next_due": "unknown",
-            }
-            if self.task["tag_id"]:
-                self._attr_extra_state_attributes["tag_id"] = self.task["tag_id"]
-            return
-
-        if last.tzinfo is None:
-            last = dt_util.as_utc(last)
-
         interval_value = self.task["interval_value"]
         interval_type = self.task["interval_type"]
-        due_date = self._calculate_next_due(
-            last, interval_value, interval_type
-        ).replace(hour=0, minute=0, second=0, microsecond=0)
-
-        self._attr_is_on = (
-            dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0) >= due_date
-        )
+        is_km_based = interval_type in ("kilometers", "miles")
+        
+        # Initialize attributes
         self._attr_extra_state_attributes = {
-            "last_performed": self.task["last_performed"],
-            "interval_value": self.task["interval_value"],
-            "interval_type": self.task["interval_type"],
-            "next_due": due_date.isoformat(),
+            "interval_value": interval_value,
+            "interval_type": interval_type,
         }
-        if self.task["tag_id"]:
+        
+        if self.task.get("tag_id"):
             self._attr_extra_state_attributes["tag_id"] = self.task["tag_id"]
+        
+        # Handle km-based intervals
+        if is_km_based:
+            last_odometer = self.task.get("last_odometer")
+            current_odometer = self._get_current_odometer()
+            next_due_odometer = self._calculate_next_due_odometer(last_odometer, interval_value, interval_type)
+            
+            # Add odometer-related attributes
+            self._attr_extra_state_attributes["last_odometer"] = last_odometer
+            if current_odometer is not None:
+                self._attr_extra_state_attributes["current_odometer"] = current_odometer
+            if next_due_odometer is not None:
+                self._attr_extra_state_attributes["next_due_odometer"] = next_due_odometer
+            
+            # Determine if task is due based on odometer
+            if last_odometer is None or current_odometer is None:
+                # Can't determine if due without odometer reading
+                self._attr_is_on = False
+                self._attr_extra_state_attributes["next_due"] = "unknown (odometer not available)"
+            else:
+                self._attr_is_on = current_odometer >= next_due_odometer
+                self._attr_extra_state_attributes["next_due"] = f"{next_due_odometer:.0f} {interval_type}"
+            
+            # Still track last_performed date for reference
+            self._attr_extra_state_attributes["last_performed"] = self.task.get("last_performed", "")
+            
+        # Handle time-based intervals
+        else:
+            last = dt_util.parse_datetime(self.task["last_performed"])
+            if last is None:
+                self._attr_is_on = True
+                self._attr_extra_state_attributes["last_performed"] = self.task.get("last_performed", "")
+                self._attr_extra_state_attributes["next_due"] = "unknown"
+                return
+
+            if last.tzinfo is None:
+                last = dt_util.as_utc(last)
+
+            due_date = self._calculate_next_due_date(last, interval_value, interval_type)
+            if due_date is not None:
+                due_date = due_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                self._attr_is_on = (
+                    dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0) >= due_date
+                )
+                self._attr_extra_state_attributes["next_due"] = due_date.isoformat()
+            else:
+                self._attr_is_on = False
+                self._attr_extra_state_attributes["next_due"] = "unknown"
+            
+            self._attr_extra_state_attributes["last_performed"] = self.task["last_performed"]
 
     async def async_update(self) -> None:
         """Get the latest state of the sensor."""

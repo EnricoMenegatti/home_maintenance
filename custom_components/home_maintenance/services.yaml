@@ -2,6 +2,7 @@ reset_last_performed:
   name: Reset Last Performed
   description: >
     Resets the 'last_performed' date for a maintenance task entity, and updates the 'next_due' date based on the interval.
+    For km-based tasks, also updates the odometer reading.
   fields:
     entity_id:
       name: Entity ID
@@ -17,3 +18,13 @@ reset_last_performed:
       example: "2025-06-01"
       selector:
         date:
+    performed_odometer:
+      name: Performed Odometer
+      description: For km-based tasks, optionally specify the odometer reading when the task was performed.
+      required: false
+      selector:
+        number:
+          min: 0
+          step: 1
+          mode: box
+          unit_of_measurement: km

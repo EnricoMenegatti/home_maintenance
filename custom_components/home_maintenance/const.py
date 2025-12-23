@@ -4,7 +4,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import config_validation as cv
 
-VERSION = "1.5.2"
+VERSION = "1.6.0"
 NAME = "Home Maintenance"
 MANUFACTURER = "@TJPoorman"
 
@@ -27,6 +27,7 @@ SERVICE_RESET_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
         vol.Optional("performed_date"): cv.string,
+        vol.Optional("performed_odometer"): vol.Any(float, int),
     }
 )
 

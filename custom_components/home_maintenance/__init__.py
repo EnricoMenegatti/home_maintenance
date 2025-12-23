@@ -148,8 +148,9 @@ def register_services(hass: HomeAssistant) -> None:
         if entity is None:
             return
 
+        performed_odometer = call.data.get("performed_odometer")
         store = hass.data[const.DOMAIN].get("store")
-        store.update_last_performed(task_id, performed_date)
+        store.update_last_performed(task_id, performed_date, performed_odometer)
 
     hass.services.async_register(
         const.DOMAIN,

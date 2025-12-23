@@ -29,6 +29,10 @@ class HomeMaintenanceTask:
     last_performed: str = attr.ib()
     tag_id: str | None = attr.ib(default=None)
     icon: str | None = attr.ib(default=None)
+    last_odometer: float | None = attr.ib(default=None)  # For km-based intervals
+    odometer_entity: str | None = attr.ib(default=None)  # Optional sensor entity for odometer
+    category: str | None = attr.ib(default=None)  # "home", "car", "motorcycle", etc.
+    item_name: str | None = attr.ib(default=None)  # Specific name like "Casa Roma", "Fiat Punto", etc.
 
 
 class TaskStore:
@@ -167,6 +171,11 @@ class TaskStore:
             task.tag_id = tag_id if tag_id else None
             entity.task["tag_id"] = tag_id if tag_id else None
 
+        if "odometer_entity" in updated:
+            odometer_entity = updated["odometer_entity"]
+            task.odometer_entity = odometer_entity if odometer_entity else None
+            entity.task["odometer_entity"] = odometer_entity if odometer_entity else None
+
         if "labels" in updated:
             registry = entity_registry.async_get(self.hass)
             if registry.async_get(entity.entity_id):
@@ -179,9 +188,9 @@ class TaskStore:
         self._save()
 
     def update_last_performed(
-        self, task_id: str, performed_date: datetime | None = None
+        self, task_id: str, performed_date: datetime | None = None, performed_odometer: float | None = None
     ) -> None:
-        """Update a task's last performed date."""
+        """Update a task's last performed date and optionally odometer."""
         entity = self.hass.data[const.DOMAIN]["entities"].get(task_id)
         task = self._tasks.get(task_id)
 
@@ -197,6 +206,22 @@ class TaskStore:
 
         entity.task["last_performed"] = performed_date_str
         task.last_performed = performed_date_str
+        
+        # If this is a km-based task and odometer is provided, update it
+        if task.interval_type in ("kilometers", "miles"):
+            # If odometer_entity exists, try to get current value from sensor
+            if performed_odometer is None and task.odometer_entity:
+                try:
+                    odometer_state = self.hass.states.get(task.odometer_entity)
+                    if odometer_state and odometer_state.state not in ("unknown", "unavailable"):
+                        performed_odometer = float(odometer_state.state)
+                except (ValueError, TypeError):
+                    pass
+            
+            if performed_odometer is not None:
+                entity.task["last_odometer"] = performed_odometer
+                task.last_odometer = performed_odometer
+        
         self.hass.async_create_task(entity.async_update_ha_state(force_refresh=True))
         self._save()
 

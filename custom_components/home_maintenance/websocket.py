@@ -19,18 +19,54 @@ def websocket_get_tasks(
 ) -> None:
     """Get all tasks."""
     store = hass.data[DOMAIN].get("store")
-    result = store.get_all()
-    connection.send_result(msg["id"], result)
+    entities = hass.data[DOMAIN].get("entities", {})
+    tasks = store.get_all()
+    
+    # Enrich tasks with entity attributes (like next_due_odometer, current_odometer)
+    for task in tasks:
+        task_id = task["id"]
+        entity = entities.get(task_id)
+        if entity:
+            # Get entity state and attributes
+            entity_id = entity.entity_id
+            state = hass.states.get(entity_id)
+            if state:
+                attrs = state.attributes
+                # Add relevant attributes to task
+                if "next_due_odometer" in attrs and attrs["next_due_odometer"] is not None:
+                    task["next_due_odometer"] = attrs["next_due_odometer"]
+                if "current_odometer" in attrs and attrs["current_odometer"] is not None:
+                    task["current_odometer"] = attrs["current_odometer"]
+                if "next_due" in attrs:
+                    task["next_due"] = attrs["next_due"]
+    
+    connection.send_result(msg["id"], tasks)
 
 
 @callback
 def websocket_get_task(
     hass: HomeAssistant, connection: connection.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Get single tasks."""
+    """Get single task."""
     store = hass.data[DOMAIN].get("store")
+    entities = hass.data[DOMAIN].get("entities", {})
     task_id = msg["task_id"]
     result = store.get(task_id)
+    
+    # Enrich task with entity attributes
+    entity = entities.get(task_id)
+    if entity:
+        entity_id = entity.entity_id
+        state = hass.states.get(entity_id)
+        if state:
+            attrs = state.attributes
+            if "next_due_odometer" in attrs and attrs["next_due_odometer"] is not None:
+                result["next_due_odometer"] = attrs["next_due_odometer"]
+            if "current_odometer" in attrs and attrs["current_odometer"] is not None:
+                result["current_odometer"] = attrs["current_odometer"]
+            if "next_due" in attrs:
+                result["next_due"] = attrs["next_due"]
+    
     connection.send_result(msg["id"], result)
 
 
@@ -66,6 +102,10 @@ def websocket_add_task(
         last_performed=last_performed,
         tag_id=msg.get("tag_id"),
         icon=msg.get("icon"),
+        last_odometer=msg.get("last_odometer"),
+        odometer_entity=msg.get("odometer_entity"),
+        category=msg.get("category"),
+        item_name=msg.get("item_name"),
     )
 
     labels = msg.get("labels", [])
@@ -111,7 +151,8 @@ def websocket_complete_task(
     """Mark a task as completed."""
     store = hass.data[DOMAIN].get("store")
     task_id = msg["task_id"]
-    store.update_last_performed(task_id)
+    performed_odometer = msg.get("performed_odometer")
+    store.update_last_performed(task_id, performed_odometer=performed_odometer)
     connection.send_result(msg["id"], {"success": True})
 
 
@@ -187,6 +228,10 @@ async def async_register_websockets(hass: HomeAssistant) -> None:
                 vol.Optional("tag_id"): str,
                 vol.Optional("icon"): str,
                 vol.Optional("labels"): [str],
+                vol.Optional("last_odometer"): vol.Any(float, int),
+                vol.Optional("odometer_entity"): str,
+                vol.Optional("category"): str,
+                vol.Optional("item_name"): str,
             }
         ),
     )
@@ -212,6 +257,7 @@ async def async_register_websockets(hass: HomeAssistant) -> None:
             {
                 vol.Required("type"): "home_maintenance/complete_task",
                 vol.Required("task_id"): str,
+                vol.Optional("performed_odometer"): vol.Any(float, int),
             }
         ),
     )
