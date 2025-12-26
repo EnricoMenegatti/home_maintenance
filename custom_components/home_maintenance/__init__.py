@@ -4,7 +4,8 @@ import logging
 from datetime import datetime
 from typing import cast
 
-from homeassistant.components.binary_sensor import DOMAIN as PLATFORM
+from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_PLATFORM
+from homeassistant.components.button import DOMAIN as BUTTON_PLATFORM
 from homeassistant.components.tag.const import EVENT_TAG_SCANNED
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
@@ -75,7 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "entities": {},
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, [PLATFORM])
+    await hass.config_entries.async_forward_entry_setups(entry, [BINARY_SENSOR_PLATFORM, BUTTON_PLATFORM])
 
     # Register the panel (frontend)
     await async_register_panel(hass, entry)
@@ -95,7 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload Home Maintenance config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, [PLATFORM])
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, [BINARY_SENSOR_PLATFORM, BUTTON_PLATFORM])
     if not unload_ok:
         return False
 

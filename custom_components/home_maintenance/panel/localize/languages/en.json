@@ -1,0 +1,138 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "none": "None",
+        "no_tasks": "No tasks found."
+    },
+    "intervals": {
+        "day": "Day",
+        "days": "Days",
+        "week": "Week",
+        "weeks": "Weeks",
+        "month": "Month",
+        "months": "Months",
+        "kilometer": "Kilometer",
+        "kilometers": "Kilometers",
+        "mile": "Mile",
+        "miles": "Miles"
+    },
+    "panel": {
+        "cards": {
+            "new": {
+                "title": "Create New Task",
+                "fields": {
+                    "title": {
+                        "heading": "Task Title"
+                    },
+                    "interval_value": {
+                        "heading": "Interval"
+                    },
+                    "interval_type": {
+                        "heading": "Interval Type"
+                    },
+                    "last_performed": {
+                        "heading": "Last Performed",
+                        "helper": "Leave blank to use today"
+                    },
+                    "tag": {
+                        "heading": "Tag"
+                    },
+                    "icon": {
+                        "heading": "Icon"
+                    },
+                    "label": {
+                        "heading": "Label(s)"
+                    },
+                    "category": {
+                        "heading": "Category"
+                    },
+                    "item_name": {
+                        "heading": "Item Name",
+                        "helper": "e.g., Casa Roma, Fiat Punto, etc."
+                    },
+                    "last_odometer": {
+                        "heading": "Last Odometer Reading",
+                        "helper": "Kilometers or miles when task was last performed"
+                    },
+                    "odometer_entity": {
+                        "heading": "Odometer Entity",
+                        "helper": "Sensor entity for automatic odometer tracking"
+                    }
+                },
+                "sections": {
+                    "optional": "Optional settings"
+                },
+                "actions": {
+                    "add_task": "Add Task"
+                },
+                "alerts": {
+                    "required": "Please fill all fields",
+                    "error": "Error adding task. See console for details."
+                }
+            },
+            "current": {
+                "title": "Current Tasks",
+                "no_items": "No tasks found.",
+                "every": "every",
+                "last": "Last",
+                "next": "Next Due",
+                "actions": {
+                    "complete": "Complete",
+                    "edit": "Edit",
+                    "remove": "Remove"
+                },
+                "confirm_remove": "Are you sure you want to remove this task?",
+                "confirm_complete": "Are you sure you want to mark this task as complete?"
+            }
+        },
+        "dialog": {
+            "edit_task": {
+                "title": "Edit Task",
+                "fields": {
+                    "interval_value": {
+                        "heading": "Interval"
+                    },
+                    "interval_type": {
+                        "heading": "Interval Type"
+                    },
+                    "last_performed": {
+                        "heading": "Last Performed",
+                        "helper": "Leave blank to use today"
+                    },
+                    "tag": {
+                        "heading": "Tag"
+                    },
+                    "icon": {
+                        "heading": "Icon"
+                    },
+                    "label": {
+                        "heading": "Label(s)"
+                    },
+                    "category": {
+                        "heading": "Category"
+                    },
+                    "item_name": {
+                        "heading": "Item Name",
+                        "helper": "e.g., Casa Roma, Fiat Punto, etc."
+                    },
+                    "last_odometer": {
+                        "heading": "Last Odometer Reading",
+                        "helper": "Kilometers or miles when task was last performed"
+                    },
+                    "odometer_entity": {
+                        "heading": "Odometer Entity",
+                        "helper": "Sensor entity for automatic odometer tracking"
+                    }
+                },
+                "sections": {
+                    "optional": "Optional settings"
+                },
+                "actions": {
+                    "cancel": "Cancel",
+                    "save": "Save"
+                }
+            }
+        }
+    }
+}
+

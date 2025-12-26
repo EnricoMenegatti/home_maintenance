@@ -10,6 +10,7 @@ from homeassistant.util import dt as dt_util
 
 from . import const
 from .binary_sensor import HomeMaintenanceSensor
+from .button import HomeMaintenanceButton
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -117,12 +118,24 @@ class TaskStore:
             raise RuntimeError(msg)
             return None
 
+        # Create binary sensor entity
         entity = HomeMaintenanceSensor(
             self.hass, attr.asdict(task), device_id, labels=labels
         )
         add_entities([entity])
         self._tasks[task.id] = task
         self.hass.data[const.DOMAIN]["entities"][task.id] = entity
+        
+        # Create button entity
+        add_button_entities = self.hass.data[const.DOMAIN].get("add_button_entities")
+        if add_button_entities:
+            button_entity = HomeMaintenanceButton(
+                self.hass, attr.asdict(task), device_id, labels=labels
+            )
+            add_button_entities([button_entity])
+            self.hass.data[const.DOMAIN].setdefault("button_entities", {})
+            self.hass.data[const.DOMAIN]["button_entities"][task.id] = button_entity
+        
         self._save()
 
         return entity.unique_id
@@ -131,7 +144,7 @@ class TaskStore:
         """Remove a task."""
         er = entity_registry.async_get(self.hass)
 
-        # Search for entity by unique_id
+        # Search for binary sensor entity by unique_id
         entity_entry = next(
             (
                 entry
@@ -145,11 +158,26 @@ class TaskStore:
             raise RuntimeError(msg)
             return
 
-        # Remove the entity by entity_id
+        # Remove the binary sensor entity by entity_id
         er.async_remove(entity_entry.entity_id)
+
+        # Search for button entity by unique_id
+        button_entry = next(
+            (
+                entry
+                for entry in er.entities.values()
+                if entry.unique_id == f"{task_id}_button" and entry.platform == const.DOMAIN
+            ),
+            None,
+        )
+        if button_entry:
+            # Remove the button entity by entity_id
+            er.async_remove(button_entry.entity_id)
 
         # Remove from your task list and persist
         del self._tasks[task_id]
+        if task_id in self.hass.data[const.DOMAIN].get("button_entities", {}):
+            del self.hass.data[const.DOMAIN]["button_entities"][task_id]
         self._save()
 
     def update_task(self, task_id: str, updated: dict) -> None:

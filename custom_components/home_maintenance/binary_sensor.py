@@ -72,7 +72,19 @@ class HomeMaintenanceSensor(BinarySensorEntity):
     @property
     def icon(self) -> str | None:
         """Return the icon for the task."""
-        return self.task.get("icon", "mdi:calendar-check")
+        # If explicit icon is provided, use it
+        if self.task.get("icon"):
+            return self.task["icon"]
+        # Otherwise, use category-based icon
+        category = self.task.get("category", "").lower() if self.task.get("category") else ""
+        if category == "car":
+            return "mdi:car-wrench"
+        if category == "motorcycle":
+            return "mdi:motorbike"
+        if category == "home":
+            return "mdi:home"
+        # Default icon
+        return "mdi:wrench-clock"
 
     def _calculate_next_due_date(
         self, last_performed: datetime, interval_value: int, interval_type: str
@@ -127,6 +139,12 @@ class HomeMaintenanceSensor(BinarySensorEntity):
         
         if self.task.get("tag_id"):
             self._attr_extra_state_attributes["tag_id"] = self.task["tag_id"]
+        
+        if self.task.get("category"):
+            self._attr_extra_state_attributes["category"] = self.task["category"]
+        
+        if self.task.get("item_name"):
+            self._attr_extra_state_attributes["item_name"] = self.task["item_name"]
         
         # Handle km-based intervals
         if is_km_based:
